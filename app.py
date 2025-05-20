@@ -37,15 +37,15 @@ elif page == "Predict":
                 "YearsSinceDx": YearsSinceDx
             }])
 
-            # Load full task list from tasks.csv
+            # Load all known task types from tasks.csv
             tasks_df = pd.read_csv("tasks.csv")
             all_tasks = sorted(tasks_df["Task"].dropna().unique().tolist())
 
-            # Dynamically fit encoder based on full training task set
+            # Train encoder on full list
             encoder = OneHotEncoder(handle_unknown='ignore', categories=[all_tasks])
             encoder.fit(pd.DataFrame(all_tasks, columns=["Task"]))
 
-            # Encode task
+            # Transform task input
             task_encoded = encoder.transform(input_df[["Task"]]).toarray()
             task_columns = encoder.get_feature_names_out(["Task"])
             task_df = pd.DataFrame(task_encoded, columns=task_columns)
@@ -54,16 +54,23 @@ elif page == "Predict":
             numeric = input_df[["Medication", "Kinetic", "Age", "Sex", "YearsSinceDx"]]
             numeric_scaled = (numeric - numeric.mean()) / numeric.std()
 
-            # Merge inputs
+            # Combine inputs
             final_input = pd.concat([task_df, numeric_scaled.reset_index(drop=True)], axis=1)
 
             # Load model
             model = joblib.load("combined_model.joblib")
             st.success("Model loaded successfully!")
 
-            # Predict
+            # Ensure no missing columns
+            expected_features = model[next(iter(model))].feature_names_in_
+            for col in expected_features:
+                if col not in final_input.columns:
+                    final_input[col] = 0
+            final_input = final_input[expected_features]
+
             for name, clf in model.items():
                 result = clf.predict_proba(final_input)[0][1]
                 st.info(f"{name}: {result * 100:.2f}% probability")
+
     except Exception as e:
         st.error(f"Prediction Error: {e}")
