@@ -39,7 +39,19 @@ elif page == "Predict":
             }])
 
             # Load encoder and encode Task
-            encoder = joblib.load("task_encoder.joblib")
+
+            # Dynamically re-train encoder on known task categories
+task_categories = [
+    "Rest1", "Rest2", "4MW", "4MW-C", "MB1", 
+    "Hotspot1", "Hotspot2", "Hotspot1-C", "Hotspot2-C", "MB10"
+]
+
+# Create new encoder on-the-fly
+            from sklearn.preprocessing import OneHotEncoder
+            encoder = OneHotEncoder(handle_unknown='ignore', categories=[task_categories])
+            encoder.fit(pd.DataFrame(task_categories, columns=["Task"]))
+
+# Now transform your input
             task_encoded = encoder.transform(input_df[["Task"]]).toarray()
             task_columns = encoder.get_feature_names_out(["Task"])
             task_df = pd.DataFrame(task_encoded, columns=task_columns)
