@@ -4,30 +4,6 @@ import pandas as pd
 import numpy as np
 import joblib
 from sklearn.preprocessing import OneHotEncoder
-import plotly.graph_objects as go
-
-# results = {
-#     "UPDRSIII_On": on_prob,
-#     "UPDRSIII_Off": off_prob,
-#     "NFOGQ": nfogq_prob
-# }
-
-# Display numeric results
-for name, prob in results.items():
-    st.info(f"{name}: {prob*100:.2f}% probability")
-
-# Now render a bar chart
-fig = go.Figure(
-    [go.Bar(x=list(results.keys()), y=[p*100 for p in results.values()])]
-)
-fig.update_layout(
-    title="Symptom Prediction Probabilities",
-    yaxis_title="Probability (%)",
-    xaxis_title="Symptom",
-    margin=dict(l=20, r=20, t=40, b=20)
-)
-st.plotly_chart(fig, use_container_width=True)
-
 
 st.set_page_config(page_title="PD Symptom Prediction", layout="wide")
 st.title("🧠 Parkinson's Disease Prediction Platform")
