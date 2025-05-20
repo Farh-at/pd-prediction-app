@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+from sklearn.preprocessing import OneHotEncoder
 
 st.set_page_config(page_title="PD Symptom Prediction", layout="wide")
 st.title("🧠 Parkinson's Disease Prediction Platform")
@@ -26,21 +27,8 @@ elif page == "Predict":
     Sex = st.selectbox("Sex", ["M", "F"])
     YearsSinceDx = st.slider("Years Since Diagnosis", 0, 40, 5)
 
-    if st.button("Predict"):
-        try:
-            # Input as DataFrame
-            input_df = pd.DataFrame([{
-                "Medication": 1 if Medication == "on" else 0,
-                "Kinetic": Kinetic,
-                "Task": Task,
-                "Age": Age,
-                "Sex": 1 if Sex == "M" else 0,
-                "YearsSinceDx": YearsSinceDx
-            }])
-
-            # Load encoder and encode Task
-    if st.button("Predict"):
-        try:
+    try:
+        if st.button("Predict"):
             # Input DataFrame
             input_df = pd.DataFrame([{
                 "Medication": 1 if Medication == "on" else 0,
@@ -51,7 +39,7 @@ elif page == "Predict":
                 "YearsSinceDx": YearsSinceDx
             }])
 
-            # Dynamically re-train encoder on known task categories
+            # Dynamically fit encoder
             task_categories = [
                 "Rest1", "Rest2", "4MW", "4MW-C", "MB1",
                 "Hotspot1", "Hotspot2", "Hotspot1-C", "Hotspot2-C", "MB10"
@@ -74,10 +62,8 @@ elif page == "Predict":
             model = joblib.load("combined_model.joblib")
             st.success("Model loaded successfully!")
 
-            # Predict
             for name, clf in model.items():
                 result = clf.predict_proba(final_input)[0][1]
                 st.info(f"{name}: {result * 100:.2f}% probability")
-        
-        except Exception as e:
-            st.error(f"Prediction Error: {e}")
+    except Exception as e:
+        st.error(f"Prediction Error: {e}")
