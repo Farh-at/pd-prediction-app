@@ -41,33 +41,35 @@ elif page == "Predict":
             tasks_df = pd.read_csv("tasks.csv")
             all_tasks = sorted(tasks_df["Task"].dropna().unique().tolist())
 
-            # Train encoder on full list
+            # Fit encoder
             encoder = OneHotEncoder(handle_unknown='ignore', categories=[all_tasks])
             encoder.fit(pd.DataFrame(all_tasks, columns=["Task"]))
 
-            # Transform task input
+            # Encode task input
             task_encoded = encoder.transform(input_df[["Task"]]).toarray()
             task_columns = encoder.get_feature_names_out(["Task"])
             task_df = pd.DataFrame(task_encoded, columns=task_columns)
 
-            # Normalize numeric fields
+            # Normalize numeric data
             numeric = input_df[["Medication", "Kinetic", "Age", "Sex", "YearsSinceDx"]]
             numeric_scaled = (numeric - numeric.mean()) / numeric.std()
 
-            # Combine inputs
+            # Combine task and numeric features
             final_input = pd.concat([task_df, numeric_scaled.reset_index(drop=True)], axis=1)
 
             # Load model
             model = joblib.load("combined_model.joblib")
             st.success("Model loaded successfully!")
 
-            # Ensure no missing columns
+            # Ensure no missing columns, fill all NaNs
             expected_features = model[next(iter(model))].feature_names_in_
             for col in expected_features:
                 if col not in final_input.columns:
                     final_input[col] = 0
-            final_input = final_input[expected_features]
 
+            final_input = final_input[expected_features].fillna(0)
+
+            # Predict
             for name, clf in model.items():
                 result = clf.predict_proba(final_input)[0][1]
                 st.info(f"{name}: {result * 100:.2f}% probability")
