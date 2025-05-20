@@ -21,14 +21,15 @@ elif page == "Predict":
 
     Medication = st.selectbox("Medication Status", ["on", "off"])
     Kinetic = st.slider("Kinetic", 0, 10, 5)
-    Task = st.selectbox("Task", ["Rest1", "Rest2", "4MW", "4MW-C", "MB1"])
+    Task = st.selectbox("Task", ["Rest1", "Rest2", "4MW", "4MW-C", "MB1", "Hotspot1", "Hotspot2", "Hotspot1-C", "Hotspot2-C", "MB10"])
     Age = st.number_input("Age", 0, 100, 65)
     Sex = st.selectbox("Sex", ["M", "F"])
     YearsSinceDx = st.slider("Years Since Diagnosis", 0, 40, 5)
 
     if st.button("Predict"):
         try:
-            data = pd.DataFrame([{
+            # Input as DataFrame
+            input_df = pd.DataFrame([{
                 "Medication": 1 if Medication == "on" else 0,
                 "Kinetic": Kinetic,
                 "Task": Task,
@@ -37,22 +38,24 @@ elif page == "Predict":
                 "YearsSinceDx": YearsSinceDx
             }])
 
-            # Encode Task manually
-            task_dummies = pd.get_dummies(data["Task"], prefix="Task")
-            for col in ["Task_4MW", "Task_4MW-C", "Task_MB1", "Task_Rest1", "Task_Rest2"]:
-                if col not in task_dummies.columns:
-                    task_dummies[col] = 0
-            task_dummies = task_dummies[["Task_4MW", "Task_4MW-C", "Task_MB1", "Task_Rest1", "Task_Rest2"]]
+            # Load encoder and encode Task
+            encoder = joblib.load("task_encoder.joblib")
+            task_encoded = encoder.transform(input_df[["Task"]]).toarray()
+            task_columns = encoder.get_feature_names_out(["Task"])
+            task_df = pd.DataFrame(task_encoded, columns=task_columns)
 
-            # Standardize numerical values
-            num = data[["Medication", "Kinetic", "Age", "Sex", "YearsSinceDx"]]
-            num_scaled = (num - num.mean()) / num.std()
+            # Normalize numeric data
+            numeric = input_df[["Medication", "Kinetic", "Age", "Sex", "YearsSinceDx"]]
+            numeric_scaled = (numeric - numeric.mean()) / numeric.std()
 
-            final_input = pd.concat([task_dummies, num_scaled], axis=1)
+            # Merge final input
+            final_input = pd.concat([task_df, numeric_scaled.reset_index(drop=True)], axis=1)
 
+            # Load model
             model = joblib.load("combined_model.joblib")
-            st.success("Model loaded successfully!")
+            st.success("Model and encoder loaded successfully!")
 
+            # Predict
             for name, clf in model.items():
                 result = clf.predict_proba(final_input)[0][1]
                 st.info(f"{name}: {result*100:.2f}% probability")
